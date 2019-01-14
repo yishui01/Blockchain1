@@ -1,8 +1,6 @@
 package main
 
 import (
-	"bytes"
-	"crypto/sha256"
 	"time"
 )
 
@@ -29,13 +27,25 @@ func NewBlock(data string, prevBlockHash []byte) *Block {
 		//Hash TODO
 		MerKelRoot: []byte{},
 		TimeStamp:  time.Now().Unix(),
-		Bits:       1,
-		Nonce:      1,
+		Bits:       targetBits,
+		Nonce:      0,
 		Data:       []byte(data)}
-	block.SetHash()
+	//block.SetHash()
+	//block.SetHash()
+	pow := NewProofOfWork(&block)
+	nonce, hash :=pow.Run()
+	block.Hash = hash
+	block.Nonce = nonce
+
 	return &block
 }
 
+//创建一个初始块
+func NewGenesisBlock() *Block {
+	return NewBlock("Genesis Block!", []byte{})
+}
+
+/*
 //设置一个区块的hash值
 func (block *Block) SetHash() {
 	tmp := [][]byte{
@@ -50,8 +60,5 @@ func (block *Block) SetHash() {
 	hash := sha256.Sum256(data)
 	block.Hash = hash[:]
 }
+*/
 
-//创建一个初始块
-func NewGenesisBlock() *Block {
-	 return NewBlock("Genesis Block!", []byte{})
-}

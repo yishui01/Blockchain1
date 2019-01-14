@@ -9,7 +9,7 @@ func main() {
 	bc.AddBlock("A send B 1BTC")
 	bc.AddBlock("B send C 1BTC")
 
-	for _,block := range bc.blocks{
+	for _, block := range bc.blocks {
 		fmt.Printf("Version: %d\n", block.Version)
 		fmt.Printf("PrevBlockHash: %x\n", block.PrevBlockHash)
 		fmt.Printf("Hash: %x\n", block.Hash)
