@@ -46,18 +46,27 @@ func (pow *ProofOfWork) Run() (int64, []byte) {
 	var nonce int64 = 0
 	var hashInt big.Int;
 	fmt.Println("开始挖矿")
-	fmt.Printf("target hash:%x\n",pow.target.Bytes())
+	fmt.Printf("target hash:%x\n", pow.target.Bytes())
 
 	for nonce < math.MaxInt64 {
-		data := pow.PrepareData(nonce)
-		hash = sha256.Sum256(data)
-		hashInt.SetBytes(hash[:])
+		data := pow.PrepareData(nonce) //通过随机数将block准备成一个切片并返回
+		hash = sha256.Sum256(data) //生成32位的hash值
+		hashInt.SetBytes(hash[:])  //把hash转换成整数
 		if hashInt.Cmp(pow.target) == -1 { //hashInt比target小，目标达成
-			fmt.Printf("found hash, nonce :%x, hash: %d\n", hash,nonce)
+			fmt.Printf("found hash, nonce :%x, nonce: %d\n", hash, nonce)
 			break;
 		} else {
 			nonce++
 		}
 	}
 	return nonce, hash[:]
+}
+
+//校验函数
+func (pow *ProofOfWork)IsValid() bool {
+	var hashInt big.Int;
+	data := pow.PrepareData(pow.block.Nonce)
+	hash := sha256.Sum256(data)
+	hashInt.SetBytes(hash[:])  //把hash这个32位的切片转换成整数
+	return  hashInt.Cmp(pow.target) == -1  //hashInt比target小，目标达成
 }

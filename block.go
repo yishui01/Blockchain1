@@ -31,7 +31,6 @@ func NewBlock(data string, prevBlockHash []byte) *Block {
 		Nonce:      0,
 		Data:       []byte(data)}
 	//block.SetHash()
-	//block.SetHash()
 	pow := NewProofOfWork(&block)
 	nonce, hash :=pow.Run()
 	block.Hash = hash

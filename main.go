@@ -18,6 +18,7 @@ func main() {
 		fmt.Printf("Bits: %d\n", block.Bits)
 		fmt.Printf("Nonce: %d\n", block.Nonce)
 		fmt.Printf("Data: %x\n", block.Data)
-		fmt.Printf("\n\n\n")
+		fmt.Printf("IsValid: %v\n", NewProofOfWork(block).IsValid())
+		fmt.Printf("\n\n")
 	}
 }
