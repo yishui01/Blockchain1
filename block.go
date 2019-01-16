@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"encoding/gob"
 	"time"
 )
 
@@ -32,7 +34,7 @@ func NewBlock(data string, prevBlockHash []byte) *Block {
 		Data:       []byte(data)}
 	//block.SetHash()
 	pow := NewProofOfWork(&block)
-	nonce, hash :=pow.Run()
+	nonce, hash := pow.Run()
 	block.Hash = hash
 	block.Nonce = nonce
 
@@ -42,6 +44,26 @@ func NewBlock(data string, prevBlockHash []byte) *Block {
 //创建一个初始块
 func NewGenesisBlock() *Block {
 	return NewBlock("Genesis Block!", []byte{})
+}
+
+//序列化block
+func (block *Block) Serialize() []byte {
+	var buffer bytes.Buffer
+	encoder := gob.NewEncoder(&buffer)
+	err := encoder.Encode(block)
+	CheckErr(err, "编码block失败")
+	return buffer.Bytes()
+}
+
+func Unserialize(data []byte) *Block  {
+	if len(data) == 0{
+		return nil;
+	}
+	var block Block;
+	decoder := gob.NewDecoder(bytes.NewReader(data))
+	err := decoder.Decode(&block)
+	CheckErr(err, "反序列化失败")
+	return &block
 }
 
 /*
@@ -60,4 +82,3 @@ func (block *Block) SetHash() {
 	block.Hash = hash[:]
 }
 */
-
