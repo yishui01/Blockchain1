@@ -81,3 +81,30 @@ func (bc *BlockChain) AddBlock(data string) {
 	})
 	CheckErr(err2, "addblock的err2失败")
 }
+
+//迭代器，就是一个对象，它里面包含了一个游标，一直向前（后）移动，完成整个容器的遍历
+type BlockChainIterator struct {
+	currHash []byte
+	db *bolt.DB
+}
+
+//创建迭代器，同时初始化指向最后一个区块
+func (bc *BlockChain)NewIterator()*BlockChainIterator  {
+	return &BlockChainIterator{currHash:bc.tail,db:bc.db}
+}
+
+func (it *BlockChainIterator)Next()(block *Block)  {
+	err := it.db.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte(blockBucket))
+		if bucket == nil{
+			return nil
+		}
+		data := bucket.Get(it.currHash)
+		block = Unserialize(data)
+		it.currHash = block.PrevBlockHash
+		return nil
+	})
+
+	CheckErr(err,"next出错")
+	return
+}
