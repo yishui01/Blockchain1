@@ -55,8 +55,8 @@ func (block *Block) Serialize() []byte {
 	return buffer.Bytes()
 }
 
-func Unserialize(data []byte) *Block  {
-	if len(data) == 0{
+func Unserialize(data []byte) *Block {
+	if len(data) == 0 {
 		return nil;
 	}
 	var block Block;

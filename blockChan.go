@@ -37,12 +37,12 @@ func NewBlockChain() *BlockChain {
 			lastHash = bucket.Get([]byte(lastHashKey))
 		} else {
 			//没有bucket，要去创建bucket，将数据写到数据库的bucket中
-			genesis := NewGenesisBlock()
+			genesis := NewGenesisBlock() //返回一个创建好的 // *block
 			bucket, err2 := tx.CreateBucket([]byte(blockBucket))
 			CheckErr(err2, "创建Bucket失败")
 			err3 := bucket.Put(genesis.Hash, genesis.Serialize()) //往里写数据
 			CheckErr(err3, "往bucket中写数据失败")
-			err4 := bucket.Put([]byte(lastHashKey), genesis.Hash)
+			err4 := bucket.Put([]byte(lastHashKey), genesis.Hash) //设置最后一个hash值
 			CheckErr(err4, "往bucket中写lasthash失败")
 			lastHash = genesis.Hash
 		}
@@ -93,6 +93,7 @@ func (bc *BlockChain)NewIterator()*BlockChainIterator  {
 	return &BlockChainIterator{currHash:bc.tail,db:bc.db}
 }
 
+//解序列化当前currentHash指向的block并返回指针，然后把currHash指向前一个hash
 func (it *BlockChainIterator)Next()(block *Block)  {
 	err := it.db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte(blockBucket))
