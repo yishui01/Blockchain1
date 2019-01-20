@@ -2,12 +2,13 @@ package main
 
 import (
 	"./bolt"
+	"fmt"
 	"os"
 )
 
 const dbFile = "blockChain.db"
 const blockBucket = "bucket"
-const lastHashKey  = "lastkey"
+const lastHashKey = "lastkey"
 
 type BlockChain struct {
 	//blocks []*Block 已废弃
@@ -18,39 +19,69 @@ type BlockChain struct {
 	tail []byte
 }
 
+func isDBExist() bool {
+	_, err := os.Stat(dbFile)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return true
+}
+
 //创建一个区块链
-func NewBlockChain() *BlockChain {
+func InitBlockChain() *BlockChain {
+	//block := NewGenesisBlock()
+	//return &BlockChain{blocks: []*Block{block}}
+	if isDBExist() {
+		fmt.Println("blockchain exist already, not to created!")
+		os.Exit(1)
+	}
+	//func Open(path string, mode os.FileMode, options *Options) (*DB, error) {
+	db, err := bolt.Open(dbFile, 0600, nil)
+	CheckErr(err, "初始化BlockChain失败");
+	var lastHash []byte
+
+	//func (db *DB) Update(fn func(*Tx) error) error {
+	err1 := db.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte(blockBucket))
+		//没有bucket，要去创建bucket，将数据写到数据库的bucket中
+		genesis := NewGenesisBlock() //返回一个创建好的 // *block
+		bucket, err2 := tx.CreateBucket([]byte(blockBucket))
+		CheckErr(err2, "创建Bucket失败")
+		err3 := bucket.Put(genesis.Hash, genesis.Serialize()) //往里写数据
+		CheckErr(err3, "往bucket中写数据失败")
+		err4 := bucket.Put([]byte(lastHashKey), genesis.Hash) //设置最后一个hash值
+		CheckErr(err4, "往bucket中写lasthash失败")
+		lastHash = genesis.Hash
+		return nil;
+	});
+	CheckErr(err1, "找Bucket失败");
+	return &BlockChain{db: db, tail: lastHash}
+}
+
+func GetBlockChainHandler() *BlockChain {
+	if !isDBExist() {
+		fmt.Println("Please create blockchain first!")
+		os.Exit(1)
+	}
 	//block := NewGenesisBlock()
 	//return &BlockChain{blocks: []*Block{block}}
 
 	//func Open(path string, mode os.FileMode, options *Options) (*DB, error) {
 	db, err := bolt.Open(dbFile, 0600, nil)
 	CheckErr(err, "打开文件失败");
-
 	var lastHash []byte
 
 	//func (db *DB) Update(fn func(*Tx) error) error {
-	err1 := db.Update(func(tx *bolt.Tx) error {
+	err1 := db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte(blockBucket))
 		if bucket != nil {
 			//取出最后区块的hash值返回
 			lastHash = bucket.Get([]byte(lastHashKey))
-		} else {
-			//没有bucket，要去创建bucket，将数据写到数据库的bucket中
-			genesis := NewGenesisBlock() //返回一个创建好的 // *block
-			bucket, err2 := tx.CreateBucket([]byte(blockBucket))
-			CheckErr(err2, "创建Bucket失败")
-			err3 := bucket.Put(genesis.Hash, genesis.Serialize()) //往里写数据
-			CheckErr(err3, "往bucket中写数据失败")
-			err4 := bucket.Put([]byte(lastHashKey), genesis.Hash) //设置最后一个hash值
-			CheckErr(err4, "往bucket中写lasthash失败")
-			lastHash = genesis.Hash
 		}
 		return nil;
 	});
 	CheckErr(err1, "找Bucket失败");
-
-	return &BlockChain{db:db, tail:lastHash}
+	return &BlockChain{db: db, tail: lastHash}
 }
 
 //往区块链里面加区块
@@ -58,7 +89,7 @@ func (bc *BlockChain) AddBlock(data string) {
 	var prevHash []byte
 	err1 := bc.db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte(blockBucket))
-		if bucket == nil{
+		if bucket == nil {
 			os.Exit(1)
 		}
 		prevHash = bucket.Get([]byte(lastHashKey))
@@ -67,7 +98,7 @@ func (bc *BlockChain) AddBlock(data string) {
 	CheckErr(err1, "addblock的err1失败")
 
 	block := NewBlock(data, prevHash)
-	err2:= bc.db.Update(func(tx *bolt.Tx) error {
+	err2 := bc.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte(blockBucket))
 		if bucket == nil {
 			os.Exit(1)
@@ -85,19 +116,19 @@ func (bc *BlockChain) AddBlock(data string) {
 //迭代器，就是一个对象，它里面包含了一个游标，一直向前（后）移动，完成整个容器的遍历
 type BlockChainIterator struct {
 	currHash []byte
-	db *bolt.DB
+	db       *bolt.DB
 }
 
 //创建迭代器，同时初始化指向最后一个区块
-func (bc *BlockChain)NewIterator()*BlockChainIterator  {
-	return &BlockChainIterator{currHash:bc.tail,db:bc.db}
+func (bc *BlockChain) NewIterator() *BlockChainIterator {
+	return &BlockChainIterator{currHash: bc.tail, db: bc.db}
 }
 
 //解序列化当前currentHash指向的block并返回指针，然后把currHash指向前一个hash
-func (it *BlockChainIterator)Next()(block *Block)  {
+func (it *BlockChainIterator) Next() (block *Block) {
 	err := it.db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte(blockBucket))
-		if bucket == nil{
+		if bucket == nil {
 			return nil
 		}
 		data := bucket.Get(it.currHash)
@@ -106,6 +137,6 @@ func (it *BlockChainIterator)Next()(block *Block)  {
 		return nil
 	})
 
-	CheckErr(err,"next出错")
+	CheckErr(err, "next出错")
 	return
 }

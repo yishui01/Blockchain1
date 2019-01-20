@@ -7,23 +7,28 @@ import (
 )
 
 const usage = `
+	createChain --address ADDRESS "create a blockchain"
 	addBlock --data  DATA      "add a block to blockchain"	
 	printChain			"print all blocks"
 `
 const AddBlockCmdString = "addBlock"
 const PrintChainCmdString = "printChain"
+const CreateChainCmdString = "createChain"
 
 type Cli struct {
-	bc *BlockChain
+	//bc *BlockChain
 }
 
 func (cli *Cli) AddBlock(data string) {
-	cli.bc.AddBlock(data)
+	bc := GetBlockChainHandler()
+	bc.AddBlock(data)
 }
 
 func (cli *Cli) PrintChain() {
 	//打印数据
-	it := cli.bc.NewIterator()
+	bc := GetBlockChainHandler()
+
+	it := bc.NewIterator()
 	for {
 		block := it.Next()
 		fmt.Printf("Version: %d\n", block.Version)
@@ -58,16 +63,29 @@ func (cli *Cli) ParaCheck() {
 
 func (cli *Cli) Run() {
 	cli.ParaCheck()
+	createChainCmd := flag.NewFlagSet(CreateChainCmdString, flag.ExitOnError)
 	addBlockCmd := flag.NewFlagSet(AddBlockCmdString, flag.ExitOnError)
 	printChainCmd := flag.NewFlagSet(PrintChainCmdString, flag.ExitOnError)
 
 	addPara := addBlockCmd.String("data", "", "block transaction info!")
+	createChainPara := createChainCmd.String("address", "", "address info!")
 
 	switch os.Args[1] {
+	case CreateChainCmdString:
+		//创建区块链
+		err := createChainCmd.Parse(os.Args[2:])
+		CheckErr(err, "Run0000出错")
+		if createChainCmd.Parsed() {
+			if *createChainPara == "" {
+				fmt.Println("address参数不能为空")
+				cli.printUsage()
+			}
+			cli.CreateChain(*createChainPara)
+		}
 	case AddBlockCmdString:
 		//添加区块
 		err := addBlockCmd.Parse(os.Args[2:])
-		CheckErr(err, "Run出错")
+		CheckErr(err, "Run1111出错")
 		if addBlockCmd.Parsed() {
 			if *addPara == "" {
 				fmt.Println("data参数不能为空")
@@ -82,7 +100,14 @@ func (cli *Cli) Run() {
 		if printChainCmd.Parsed() {
 			cli.PrintChain()
 		}
+
 	default:
 		cli.printUsage()
 	}
+}
+
+func (cli *Cli) CreateChain(address string) {
+	bc := InitBlockChain()
+	defer bc.db.Close()
+	fmt.Println("Create blockchain successfully!")
 }
