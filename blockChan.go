@@ -10,6 +10,8 @@ const dbFile = "blockChain.db"
 const blockBucket = "bucket"
 const lastHashKey = "lastkey"
 
+const genesisInfo  = "你们的皇帝回来了"
+
 type BlockChain struct {
 	//blocks []*Block 已废弃
 
@@ -28,7 +30,7 @@ func isDBExist() bool {
 }
 
 //创建一个区块链
-func InitBlockChain() *BlockChain {
+func InitBlockChain(address string) *BlockChain {
 	//block := NewGenesisBlock()
 	//return &BlockChain{blocks: []*Block{block}}
 	if isDBExist() {
@@ -44,7 +46,8 @@ func InitBlockChain() *BlockChain {
 	err1 := db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte(blockBucket))
 		//没有bucket，要去创建bucket，将数据写到数据库的bucket中
-		genesis := NewGenesisBlock() //返回一个创建好的 // *block
+		coinbase := NewCoinBaseTx(address, genesisInfo)
+		genesis := NewGenesisBlock(coinbase) //返回一个创建好的 // *block
 		bucket, err2 := tx.CreateBucket([]byte(blockBucket))
 		CheckErr(err2, "创建Bucket失败")
 		err3 := bucket.Put(genesis.Hash, genesis.Serialize()) //往里写数据
@@ -85,7 +88,7 @@ func GetBlockChainHandler() *BlockChain {
 }
 
 //往区块链里面加区块
-func (bc *BlockChain) AddBlock(data string) {
+func (bc *BlockChain) AddBlock(txs []*Transaction) {
 	var prevHash []byte
 	err1 := bc.db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte(blockBucket))
@@ -97,7 +100,7 @@ func (bc *BlockChain) AddBlock(data string) {
 	})
 	CheckErr(err1, "addblock的err1失败")
 
-	block := NewBlock(data, prevHash)
+	block := NewBlock(txs, prevHash)
 	err2 := bc.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte(blockBucket))
 		if bucket == nil {

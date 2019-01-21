@@ -20,8 +20,8 @@ type Cli struct {
 }
 
 func (cli *Cli) AddBlock(data string) {
-	bc := GetBlockChainHandler()
-	bc.AddBlock(data)
+	//bc := GetBlockChainHandler()  //TODO
+	//bc.AddBlock(data)
 }
 
 func (cli *Cli) PrintChain() {
@@ -38,7 +38,7 @@ func (cli *Cli) PrintChain() {
 		fmt.Printf("TimeStamp: %d\n", block.TimeStamp)
 		fmt.Printf("Bits: %d\n", block.Bits)
 		fmt.Printf("Nonce: %d\n", block.Nonce)
-		fmt.Printf("Data: %x\n", block.Data)
+		//fmt.Printf("Data: %x\n", block.Data) TODO
 		fmt.Printf("IsValid: %v\n", NewProofOfWork(block).IsValid())
 		fmt.Printf("\n\n")
 		if len(block.PrevBlockHash) == 0 {
@@ -107,7 +107,7 @@ func (cli *Cli) Run() {
 }
 
 func (cli *Cli) CreateChain(address string) {
-	bc := InitBlockChain()
+	bc := InitBlockChain(address)
 	defer bc.db.Close()
 	fmt.Println("Create blockchain successfully!")
 }

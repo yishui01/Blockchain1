@@ -32,7 +32,9 @@ func (pow *ProofOfWork) PrepareData(nonce int64) []byte {
 		IntToByte(block.TimeStamp),
 		IntToByte(targetBits), //难度值
 		IntToByte(nonce),      //随机值
-		block.Data}
+		//block.Data
+		//block.Transactions.ToHash() //TODO
+	}
 	data := bytes.Join(tmp, []byte{}) //把二维拼接成一维切片，第二个参数是拼接标志，这里传个空值
 
 	return data

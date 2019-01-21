@@ -15,13 +15,14 @@ type Block struct {
 	TimeStamp     int64  //时间戳
 	Bits          int64  //难度值
 	Nonce         int64  //随机值
-	Data          []byte //交易信息
+	//Data          []byte //交易信息
+	Transactions []*Transaction //交易信息
 }
 
 /**
 创建一个新的区块
  */
-func NewBlock(data string, prevBlockHash []byte) *Block {
+func NewBlock(txs []*Transaction, prevBlockHash []byte) *Block {
 	var block Block;
 	block = Block{
 		Version:       1,
@@ -31,7 +32,7 @@ func NewBlock(data string, prevBlockHash []byte) *Block {
 		TimeStamp:  time.Now().Unix(),
 		Bits:       targetBits,
 		Nonce:      0,
-		Data:       []byte(data)}
+		Transactions:       txs}
 	//block.SetHash()
 	pow := NewProofOfWork(&block)
 	nonce, hash := pow.Run()
@@ -42,8 +43,8 @@ func NewBlock(data string, prevBlockHash []byte) *Block {
 }
 
 //创建一个初始块
-func NewGenesisBlock() *Block {
-	return NewBlock("Genesis Block!", []byte{})
+func NewGenesisBlock(coinbase *Transaction) *Block {
+	return NewBlock([]*Transaction{coinbase}, []byte{}) //TODO
 }
 
 //序列化block
