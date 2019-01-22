@@ -15,9 +15,19 @@ type Transaction struct {
 	TXOutputs []TXOutput //输出
 }
 
-//func NewTransaction()  {
-//
-//}
+//input 判断传进来的string能不能解锁这个UTXO
+func (input *TXInput)CanUnlockUTXOWith(unlockData string) bool  {
+	return input.ScriptSig == unlockData
+}
+
+//检查当前用户是否是UTXO的所有者
+func (output *TXOutput)CanBeUnlockWith(unlockData string) bool {
+	return output.ScriptPubKey == unlockData;
+}
+
+func NewTransaction(from, to string, amount float64, bc *BlockChain) {
+
+}
 
 type TXInput struct {
 	TXID      []byte //所引用输出的交易ID
