@@ -10,7 +10,7 @@ const dbFile = "blockChain.db"
 const blockBucket = "bucket"
 const lastHashKey = "lastkey"
 
-const genesisInfo  = "你们的皇帝回来了"
+const genesisInfo = "你们的皇帝回来了"
 
 type BlockChain struct {
 	//blocks []*Block 已废弃
@@ -142,4 +142,60 @@ func (it *BlockChainIterator) Next() (block *Block) {
 
 	CheckErr(err, "next出错")
 	return
+}
+
+//返回指定地址能够支配的utxo的交易集合
+func (bc *BlockChain) FindUTXOTransactions(address string) []Transaction {
+	//包含目标utxo的交易集合
+	var UTXOTransactions []Transaction
+	//存储使用过的utxo的集合 map[交易ID]索引数组
+	//这里要考虑多个索引的问题，所以要用数组来存索引ID
+	spentUTXO := make(map[string][]int64)
+	it := bc.NewIterator()
+
+	for {
+		//遍历区块
+		block := it.Next()
+
+		//遍历区块类的交易
+		for _, tx := range block.Transactions {
+			//遍历input
+			//目的：找到已经消耗过的utxo，把他们放到一个集合里
+			//需要两个字段来标识使用过的utxo   交易ID和output的索引
+
+			if !(tx.IsCoinbase()) {
+				for _, input := range tx.TXInputs {
+					if input.CanUnlockUTXOWith(address) {
+						spentUTXO[string(tx.TXID)] = append(spentUTXO[string(tx.TXID)], input.Vout)
+					}
+				}
+			}
+
+			//遍历交易里的output
+			//目的：找到所有能支配的utxo
+			for currentIndex, output := range tx.TXOutputs {
+				//检查当前的output是否已经被消耗（是否在上面input的那个数组中），如果已被消耗，continue
+				if spentUTXO[string(tx.TXID)] != nil {
+					//如果找到了，代表当前交易里面有已被消耗的utxo
+					indexes := spentUTXO[string(tx.TXID)]
+					for _, index := range indexes {
+						if int64(currentIndex) == int64(index) {
+							//当前output的索引和那个记录的已被消耗的output的索引相等，那么这个output是消耗了的
+							break
+						}
+					}
+				}
+				//遍历output
+				//比对传入的地址和这个utxo的地址所有者，是不是同一个，是的
+				if output.CanBeUnlockWith(address) {
+					UTXOTransactions = append(UTXOTransactions, *tx)
+				}
+			}
+
+		}
+		if len(block.PrevBlockHash) == 0 {
+			break
+		}
+	}
+	return UTXOTransactions
 }

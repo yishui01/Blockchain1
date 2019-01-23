@@ -16,12 +16,12 @@ type Transaction struct {
 }
 
 //input 判断传进来的string能不能解锁这个UTXO
-func (input *TXInput)CanUnlockUTXOWith(unlockData string) bool  {
+func (input *TXInput) CanUnlockUTXOWith(unlockData string) bool {
 	return input.ScriptSig == unlockData
 }
 
 //检查当前用户是否是UTXO的所有者
-func (output *TXOutput)CanBeUnlockWith(unlockData string) bool {
+func (output *TXOutput) CanBeUnlockWith(unlockData string) bool {
 	return output.ScriptPubKey == unlockData;
 }
 
@@ -42,8 +42,8 @@ type TXOutput struct {
 
 //创建coinbase交易，只有收款人，没有付款人，是矿工的奖励交易
 func NewCoinBaseTx(address string, data string) *Transaction {
-	if data == ""{
-		data  = fmt.Sprintf("reward to %s %d btc", address, reward)
+	if data == "" {
+		data = fmt.Sprintf("reward to %s %d btc", address, reward)
 	}
 	inputs := TXInput{
 		TXID:      []byte{},
@@ -57,6 +57,15 @@ func NewCoinBaseTx(address string, data string) *Transaction {
 	tx := Transaction{TXID: []byte{}, TXInputs: []TXInput{inputs}, TXOutputs: []TXOutput{outputs}}
 	tx.SetTXID()
 	return &tx;
+}
+
+func (tx *Transaction) IsCoinbase() bool {
+	if len(tx.TXInputs) == 1 {
+		if len(tx.TXInputs[0].TXID) == 0 && tx.TXInputs[0].Vout == -1 {
+			return true;
+		}
+	}
+	return false;
 }
 
 //生成交易ID
