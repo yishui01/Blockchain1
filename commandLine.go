@@ -10,12 +10,13 @@ const usage = `
 	createChain --address ADDRESS "create a blockchain"
 	addBlock --data  DATA      "add a block to blockchain"
 	send --from FORM --to TO --amount AMOUNT  "send coin from FROM to TO"
-	getbalance --address ADDRESS  "get balance of the address"
+	getBalance --address ADDRESS  "get balance of the address"
 	printChain			"print all blocks"
 `
 const AddBlockCmdString = "addBlock"
 const PrintChainCmdString = "printChain"
 const CreateChainCmdString = "createChain"
+const GetBalanceCmdString = "getBalance"
 
 type Cli struct {
 	//bc *BlockChain
@@ -29,7 +30,7 @@ func (cli *Cli) AddBlock(data string) {
 func (cli *Cli) PrintChain() {
 	//打印数据
 	bc := GetBlockChainHandler()
-
+	defer bc.db.Close()
 	it := bc.NewIterator()
 	for {
 		block := it.Next()
@@ -65,12 +66,15 @@ func (cli *Cli) ParaCheck() {
 
 func (cli *Cli) Run() {
 	cli.ParaCheck()
+
 	createChainCmd := flag.NewFlagSet(CreateChainCmdString, flag.ExitOnError)
 	addBlockCmd := flag.NewFlagSet(AddBlockCmdString, flag.ExitOnError)
+	getBalanceCmd := flag.NewFlagSet(GetBalanceCmdString, flag.ExitOnError)
 	printChainCmd := flag.NewFlagSet(PrintChainCmdString, flag.ExitOnError)
 
 	addPara := addBlockCmd.String("data", "", "block transaction info!")
 	createChainPara := createChainCmd.String("address", "", "address info!")
+	getBalanceCmdPara := getBalanceCmd.String("address", "", "address info!")
 
 	switch os.Args[1] {
 	case CreateChainCmdString:
@@ -95,6 +99,17 @@ func (cli *Cli) Run() {
 			}
 			cli.AddBlock(*addPara)
 		}
+	case GetBalanceCmdString:
+		//获取余额
+		err := getBalanceCmd.Parse(os.Args[2:])
+		CheckErr(err, "getBalance出错")
+		if getBalanceCmd.Parsed() {
+			if *getBalanceCmdPara == "" {
+				fmt.Println("address参数不能为空")
+				cli.printUsage()
+			}
+			cli.GetBalance(*getBalanceCmdPara)
+		}
 	case PrintChainCmdString:
 		//打印输出
 		err := printChainCmd.Parse(os.Args[2:])
@@ -112,4 +127,18 @@ func (cli *Cli) CreateChain(address string) {
 	bc := InitBlockChain(address)
 	defer bc.db.Close()
 	fmt.Println("Create blockchain successfully!")
+}
+
+//获取当前用户的余额
+func (cli *Cli) GetBalance(address string) float64 {
+	bc := GetBlockChainHandler() //TODO
+	defer bc.db.Close()
+	utxos := bc.FindUTXO(address)
+	var total float64 = 0.0
+	//遍历所有的utxo，获取金总数
+	for _, utxo := range utxos {
+		total += utxo.Value
+	}
+	fmt.Println("当前",address,"的余额为",total)
+	return total
 }

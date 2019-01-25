@@ -199,3 +199,21 @@ func (bc *BlockChain) FindUTXOTransactions(address string) []Transaction {
 	}
 	return UTXOTransactions
 }
+
+//寻找指定地址能够使用的utxo
+func (bc *BlockChain) FindUTXO(address string) []*TXOutput {
+	var UTXOs []*TXOutput;
+	txs := bc.FindUTXOTransactions(address)
+
+	//遍历交易
+	for _, tx := range txs {
+		//遍历output
+		for _, utxo := range tx.TXOutputs {
+			//当前地址拥有的utxo
+			if utxo.CanBeUnlockWith(address) {
+				UTXOs = append(UTXOs, &utxo)
+			}
+		}
+	}
+	return UTXOs;
+}
