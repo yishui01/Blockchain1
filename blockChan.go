@@ -147,6 +147,7 @@ func (it *BlockChainIterator) Next() (block *Block) {
 //返回指定地址能够支配的utxo的交易集合
 func (bc *BlockChain) FindUTXOTransactions(address string) []Transaction {
 	//包含目标utxo的交易集合
+
 	var UTXOTransactions []Transaction
 	//存储使用过的utxo的集合 map[交易ID]索引数组
 	//这里要考虑多个索引的问题，所以要用数组来存索引ID
@@ -164,15 +165,28 @@ func (bc *BlockChain) FindUTXOTransactions(address string) []Transaction {
 			//需要两个字段来标识使用过的utxo   交易ID和output的索引
 
 			if !(tx.IsCoinbase()) {
+				fmt.Println("不是创世块")
+				fmt.Println("长度为",len(tx.TXInputs))
+				fmt.Printf("交易ID为%x\n",string(tx.TXID))
 				for _, input := range tx.TXInputs {
+					fmt.Println("寻找交易中的input---")
+					fmt.Printf("当前input的签名为%s",input.ScriptSig)
 					if input.CanUnlockUTXOWith(address) {
-						spentUTXO[string(tx.TXID)] = append(spentUTXO[string(tx.TXID)], input.Vout)
+						spentUTXO[string(input.TXID)] = append(spentUTXO[string(input.TXID)], input.Vout)
 					}
 				}
+			} else {
+				fmt.Println("居然是创世块")
 			}
+
+			fmt.Println("当前区块的input数组长度为", len(tx.TXInputs))
+			fmt.Println("已花费的input数组长度为", len(spentUTXO))
+
 
 			//遍历交易里的output
 			//目的：找到所有能支配的utxo
+
+			OPTIONS:
 			for currentIndex, output := range tx.TXOutputs {
 				//检查当前的output是否已经被消耗（是否在上面input的那个数组中），如果已被消耗，continue
 				if spentUTXO[string(tx.TXID)] != nil {
@@ -181,7 +195,7 @@ func (bc *BlockChain) FindUTXOTransactions(address string) []Transaction {
 					for _, index := range indexes {
 						if int64(currentIndex) == int64(index) {
 							//当前output的索引和那个记录的已被消耗的output的索引相等，那么这个output是消耗了的
-							break
+							continue OPTIONS
 						}
 					}
 				}
@@ -197,6 +211,7 @@ func (bc *BlockChain) FindUTXOTransactions(address string) []Transaction {
 			break
 		}
 	}
+	fmt.Println("包含目标utxo的交易集合长度为", len(UTXOTransactions))
 	return UTXOTransactions
 }
 
@@ -211,9 +226,14 @@ func (bc *BlockChain) FindUTXO(address string) []*TXOutput {
 		for _, utxo := range tx.TXOutputs {
 			//当前地址拥有的utxo
 			if utxo.CanBeUnlockWith(address) {
-				UTXOs = append(UTXOs, &utxo)
+				tmp := utxo;
+				fmt.Println("000utxo value:", tmp.Value, "Address: ", tmp.ScriptPubKey)
+				UTXOs = append(UTXOs, &tmp)
 			}
 		}
+	}
+	for _, utxo := range UTXOs {
+		fmt.Println("1111utxo value:", utxo.Value, "Address: ", utxo.ScriptPubKey)
 	}
 	return UTXOs;
 }

@@ -8,15 +8,16 @@ import (
 
 const usage = `
 	createChain --address ADDRESS "create a blockchain"
-	addBlock --data  DATA      "add a block to blockchain"
 	send --from FORM --to TO --amount AMOUNT  "send coin from FROM to TO"
 	getBalance --address ADDRESS  "get balance of the address"
 	printChain			"print all blocks"
 `
-const AddBlockCmdString = "addBlock"
+
+//const AddBlockCmdString = "addBlock"
 const PrintChainCmdString = "printChain"
 const CreateChainCmdString = "createChain"
 const GetBalanceCmdString = "getBalance"
+const SendCmdString = "send"
 
 type Cli struct {
 	//bc *BlockChain
@@ -68,13 +69,19 @@ func (cli *Cli) Run() {
 	cli.ParaCheck()
 
 	createChainCmd := flag.NewFlagSet(CreateChainCmdString, flag.ExitOnError)
-	addBlockCmd := flag.NewFlagSet(AddBlockCmdString, flag.ExitOnError)
+	//addBlockCmd := flag.NewFlagSet(AddBlockCmdString, flag.ExitOnError)
 	getBalanceCmd := flag.NewFlagSet(GetBalanceCmdString, flag.ExitOnError)
 	printChainCmd := flag.NewFlagSet(PrintChainCmdString, flag.ExitOnError)
+	sendCmd := flag.NewFlagSet(SendCmdString, flag.ExitOnError)
 
-	addPara := addBlockCmd.String("data", "", "block transaction info!")
+	//addPara := addBlockCmd.String("data", "", "block transaction info!")
 	createChainPara := createChainCmd.String("address", "", "address info!")
 	getBalanceCmdPara := getBalanceCmd.String("address", "", "address info!")
+
+	//send相关参数
+	fromPara := sendCmd.String("from", "", "send address info!")
+	toPara := sendCmd.String("to", "", "to address info!")
+	amountPara := sendCmd.Float64("amount", 0.0, "amount  info!")
 
 	switch os.Args[1] {
 	case CreateChainCmdString:
@@ -88,16 +95,24 @@ func (cli *Cli) Run() {
 			}
 			cli.CreateChain(*createChainPara)
 		}
-	case AddBlockCmdString:
-		//添加区块
-		err := addBlockCmd.Parse(os.Args[2:])
-		CheckErr(err, "Run1111出错")
-		if addBlockCmd.Parsed() {
-			if *addPara == "" {
-				fmt.Println("data参数不能为空")
+	case SendCmdString:
+		//发送交易
+		err := sendCmd.Parse(os.Args[2:])
+		CheckErr(err, "send解析出错")
+		if sendCmd.Parsed() {
+			if *fromPara == "" {
+				fmt.Println("发送人不能为空")
 				cli.printUsage()
 			}
-			cli.AddBlock(*addPara)
+			if *toPara == "" {
+				fmt.Println("接收人不能为空")
+				cli.printUsage()
+			}
+			if *amountPara <= 0 {
+				fmt.Println("交易金额不能为空")
+				cli.printUsage()
+			}
+			cli.Send(*fromPara, *toPara, *amountPara)
 		}
 	case GetBalanceCmdString:
 		//获取余额
@@ -134,11 +149,36 @@ func (cli *Cli) GetBalance(address string) float64 {
 	bc := GetBlockChainHandler() //TODO
 	defer bc.db.Close()
 	utxos := bc.FindUTXO(address)
+
 	var total float64 = 0.0
 	//遍历所有的utxo，获取金总数
 	for _, utxo := range utxos {
+		fmt.Println("333utxo value:", utxo.Value, "Address: ", utxo.ScriptPubKey)
 		total += utxo.Value
 	}
-	fmt.Println("当前",address,"的余额为",total)
+	fmt.Println("当前", address, "的余额为", total)
 	return total
+}
+
+func (cli *Cli) Send(from, to string, amount float64) {
+	fmt.Println("from为", from)
+	fmt.Println("to为", to)
+	fmt.Println("amount为", amount)
+
+	bc := GetBlockChainHandler()
+	defer bc.db.Close()
+
+	tx := NewTransaction(from, to, amount, bc)
+	fmt.Printf("tx的ID为 %x \r\n", tx.TXID)
+	for _, input := range tx.TXInputs {
+		fmt.Printf("当前input的ID为 %x \t Vout为 %d,\t Sign为 %s,", input.TXID, input.Vout, input.ScriptSig)
+	}
+	fmt.Println("");
+	for k, output := range tx.TXOutputs {
+		fmt.Printf("当前为第 %d 个output",k)
+		fmt.Printf("output的Value为 %f,\t Sign为 %s\n", output.Value, output.ScriptPubKey)
+	}
+
+	bc.AddBlock([]*Transaction{tx})
+	fmt.Println("send successfully!")
 }
